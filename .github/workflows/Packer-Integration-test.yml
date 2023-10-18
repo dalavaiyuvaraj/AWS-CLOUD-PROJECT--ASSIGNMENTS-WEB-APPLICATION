@@ -1,0 +1,51 @@
+name: Packer-PR-Checks
+
+on:
+  pull_request:
+    branches:
+      - main
+
+
+jobs:
+  packer_checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Create Zip Archive
+        run: |
+          zip -r Yuvaraj_dalavai_002789615_03.zip .
+
+      - name: Run Packer init
+        run: packer init ./packer/aws-Debian.pkr.hcl
+
+      - name: Run packer fmt
+        run: packer fmt ./packer/aws-Debian.pkr.hcl
+
+      - name: Check for changes
+        id: git-diff
+        run: |
+          git diff --exit-code || {
+            echo "Packer template has been modified during 'packer fmt'. Please make sure your Packer template is properly formatted.";
+            exit 1;
+          }
+
+      - name: Run packer validate
+        run: packer validate ./packer/aws-Debian.pkr.hcl 
+
+      - name: Check validation status
+        id: validate-status
+        run: |
+          if [[ $(packer validate ./packer/aws-Debian.pkr.hcl) == *"The configuration is valid."* ]]; then
+            echo "Packer template validation succeeded."
+          else
+            echo "Packer template validation failed. Please fix any issues before merging."
+            exit 1
+          fi
+
+
+      - name: Final checks
+        if: ${{ steps.validate-status.outcome == 'success' }}
+        run: echo "All checks passed. Ready to merge."

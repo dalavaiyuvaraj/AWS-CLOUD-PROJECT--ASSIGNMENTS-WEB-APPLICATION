@@ -1,0 +1,41 @@
+name: Build AMI with Packer
+
+on:
+  pull_request:
+    types:
+      - closed
+
+jobs:
+  create-zip:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Create .env File
+        run: |
+          echo "PORT=3000" >> .env
+          echo "DB_HOST=127.0.0.1" >> .env
+          echo "DB_PORT=3306" >> .env
+          echo "DB_DATABASE=Cloud_db" >> .env
+          echo "DB_USER=admin" >> .env
+          echo "DB_PASSWORD=Admin@143" >> .env
+        working-directory: ${{ github.workspace }}
+
+
+      - name: Create Zip Archive
+        run: |
+          zip -r Yuvaraj_dalavai_002789615_03.zip .
+        working-directory: ${{ github.workspace }}
+
+      - name: Build AMI
+        run: |
+          packer init ./packer/aws-Debian.pkr.hcl
+          packer fmt ./packer/aws-Debian.pkr.hcl
+          packer validate ./packer/aws-Debian.pkr.hcl
+          packer build ./packer/aws-Debian.pkr.hcl
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

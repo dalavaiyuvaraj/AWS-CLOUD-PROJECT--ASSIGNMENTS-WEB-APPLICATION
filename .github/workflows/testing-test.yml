@@ -1,0 +1,68 @@
+name: Database and Node.js Setup
+
+on:
+  
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Create .env File
+        run: |
+          echo "PORT=3000" >> .env
+          echo "DB_HOST=127.0.0.1" >> .env
+          echo "DB_PORT=3306" >> .env
+          echo "DB_DATABASE=Cloud_db" >> .env
+          echo "DB_USER=admin" >> .env
+          echo "DB_PASSWORD=Admin@143" >> .env
+        working-directory: ${{ github.workspace }}
+
+      - name: Set up Node.js and npm
+        run: |
+          sudo apt update
+          sudo apt install -y nodejs npm
+        continue-on-error: true # Continue even if this step fails
+
+      - name: Set up MariaDB
+        run: |
+          sudo apt update
+          sudo apt install -y mariadb-server
+          sudo systemctl start mariadb
+          sudo systemctl enable mariadb
+          sudo mysqladmin -u root password "Yuvarajmy@143"
+          sudo mysql -u root -p"Yuvarajmy@143" -e "CREATE DATABASE Cloud_db;"
+          sudo mysql -u root -p"Yuvarajmy@143" -e "CREATE USER 'admin'@'localhost' IDENTIFIED BY 'Admin@143';"
+          sudo mysql -u root -p"Yuvarajmy@143" -e "GRANT ALL PRIVILEGES ON *.* TO 'admin'@'localhost' WITH GRANT OPTION;"
+          sudo mysql -u root -p"Yuvarajmy@143" -e "FLUSH PRIVILEGES;"
+
+      - name: Display setup information
+        run: |
+          echo "Root password for MariaDB has been set to: Yuvarajmy@143"
+          echo "Database Cloud_db has been created."
+          echo "User admin with admin privileges has been created."
+          echo "Node.js, npm, and MariaDB have been installed."
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run index.js
+        run: node index.js &
+        
+      - name: Wait for 10 seconds
+        run: sleep 10
+
+      - name: Check URL "http://localhost:3000/healthz"
+        run: |
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/healthz)
+          if [[ "$RESPONSE" -eq 200 ]]; then
+            echo "URL is accessible."
+          else
+            echo "URL returned a non-200 status code: $RESPONSE"
+            exit 1
+          fi

@@ -14,17 +14,6 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v2
 
-      - name: Create .env File
-        run: |
-          echo "PORT=3000" >> .env
-          echo "DB_HOST=127.0.0.1" >> .env
-          echo "DB_PORT=3306" >> .env
-          echo "DB_DATABASE=Cloud_db" >> .env
-          echo "DB_USER=admin" >> .env
-          echo "DB_PASSWORD=Admin@143" >> .env
-        working-directory: ${{ github.workspace }}
-
-
       - name: Create Zip Archive
         run: |
           zip -r Yuvaraj_dalavai_002789615_03.zip .

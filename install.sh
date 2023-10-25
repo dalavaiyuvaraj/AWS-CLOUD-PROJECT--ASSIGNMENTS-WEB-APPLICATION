@@ -33,26 +33,6 @@ cd /opt/webapp
 
 sudo npm install
 
-cat > /etc/systemd/system/webapp.service <<EOF
-[Unit]
-Description=Webapp Service
-After=network.target
-
-[Service]
-Type=simple
-User=csye6225
-WorkingDirectory=/opt/webapp
-ExecStart=/usr/bin/node /opt/webapp/index.js
-Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-sudo systemctl daemon-reload
-sudo systemctl start webapp.service
-sudo systemctl enable webapp.service
-
 sudo apt-get clean
 
 

@@ -31,6 +31,15 @@ app.get('/healthz', async (req, res) => {
     }
   });
 
+  app.patch('/', basicAuth, async (req, res) => {
+    try {
+      res.status(405).json({ error: 'Method Not Allowed' });
+    } catch (error) {
+      console.error('Error:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
 // Route to retrieve all assignments with Basic Authentication required
 app.get('/assignments', basicAuth, async (req, res) => {
   try {
@@ -59,7 +68,7 @@ app.post('/assignments', basicAuth, async (req, res) => {
     const user = await User.findOne({ where: { email } });
 
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(403).json({ error: 'User not found' });
     }
 
     // Extract assignment data from the request body
@@ -85,9 +94,7 @@ app.post('/assignments', basicAuth, async (req, res) => {
 
       // Include the newly created assignment in the response
       const responsePayload = {
-        concatenatedId,
-        newAssignment,
-        assignmentLink, // Include the newAssignment object
+        newAssignment, 
       };
 
     // Return the response payload in the JSON response
@@ -110,14 +117,14 @@ app.get('/assignments/:id',basicAuth, async (req, res) => {
 
     if (!assignment) {
       // Handle the case where the assignment with the provided ID does not exist
-      return res.status(404).json({ error: 'Assignment not found' });
+      return res.status(403).json({ error: 'Assignment not found' });
     }
 
     // Return the assignment details as a JSON response
     res.status(200).json(assignment);
   } catch (error) {
     console.error('Error:', error);
-    res.status(500).json({ error: 'Unable to retrieve assignment details' });
+    res.status(403).json({ error: 'Unable to retrieve assignment details' });
   }
 });
 
@@ -138,7 +145,7 @@ app.put('/assignments/:id', basicAuth, async (req, res) => {
 
     if (!user) {
       // Handle the case where the user with the provided email does not exist
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(400).json({ error: 'User not found' });
     }
 
     // Use Sequelize to find the assignment by its ID
@@ -146,7 +153,7 @@ app.put('/assignments/:id', basicAuth, async (req, res) => {
 
     if (!assignment) {
       // Handle the case where the assignment with the provided ID does not exist
-      return res.status(404).json({ error: 'Assignment not found' });
+      return res.status(400).json({ error: 'Assignment not found' });
     }
 
     // Concatenate user ID and assignment ID with an underscore ('_')
@@ -173,10 +180,10 @@ app.put('/assignments/:id', basicAuth, async (req, res) => {
     });
 
     // Return the updated assignment as a JSON response
-    res.status(200).json(assignment);
+    res.status(204).json(assignment);
   } catch (error) {
     console.error('Error:', error);
-    res.status(500).json({ error: 'Unable to update assignment' });
+    res.status(400).json({ error: 'Unable to update assignment' });
   }
 });
 
@@ -226,10 +233,10 @@ app.delete('/assignments/:id', basicAuth, async (req, res) => {
     await assignmentLink.destroy();
 
     // Return a success message as a JSON response
-    res.status(200).json({ message: 'Assignment and Assignment_links record deleted successfully' });
+    res.status(204).json({ message: 'Assignment and Assignment_links record deleted successfully' });
   } catch (error) {
     console.error('Error:', error);
-    res.status(500).json({ error: 'Unable to delete assignment' });
+    res.status(404).json({ error: 'Unable to delete assignment' });
   }
 });
 

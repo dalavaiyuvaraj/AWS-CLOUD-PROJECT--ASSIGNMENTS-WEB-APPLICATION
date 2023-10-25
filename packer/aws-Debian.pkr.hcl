@@ -53,7 +53,6 @@ source "amazon-ebs" "my-ami" {
   ami_name        = "${var.ami_name}"
   ami_description = "${var.ami_description}"
   region          = "${var.aws_region}"
-  profile         = "${var.profile}"
   ami_users       = [245217519501, 940256833926]
 
   ami_regions = [

@@ -2,7 +2,7 @@
 
 
 # Specify the path to the zip file
-ZIP_FILE="/tmp/Yuvaraj_dalavai_002789615_03.zip"
+ZIP_FILE="/tmp/webapp.zip"
 
 # Specify the destination directory for extraction
 DEST_DIR="/opt/webapp/"
@@ -14,8 +14,6 @@ sudo apt-get upgrade -y
 
 # Install Node.js and npm
 sudo apt-get install -y nodejs npm
-
-sudo apt-get install mysql-client
 
 # Install unzip
 sudo apt-get install -y unzip

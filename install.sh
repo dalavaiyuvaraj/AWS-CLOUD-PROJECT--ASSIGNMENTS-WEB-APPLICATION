@@ -34,8 +34,8 @@ sudo chmod -R 755 .
 
 sudo mv "/opt/csye6225/webapp/webapp.service" "/etc/systemd/system/"
 
-sudo systemctl enable autosys
-sudo systemctl start autosys
+sudo systemctl enable webapp.service
+sudo systemctl start webapp.service
 
 sudo apt-get clean
 

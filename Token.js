@@ -1,10 +1,14 @@
 const bcrypt = require('bcrypt');
 const User = require('./models/Users'); // Update the path as per your project structure
+const logger = require('./logger/logger');
+const statsdClient = require('./statsd/statsd');
+const { error } = require('winston');
 
 async function basicAuth(req, res, next) {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Basic ')) {
+    logger.error("Unauthorized: Missing or invalid authentication header",error);
     res.status(401).json({ error: 'Unauthorized: Missing or invalid authentication header' });
     return;
   }
@@ -17,6 +21,7 @@ async function basicAuth(req, res, next) {
     const user = await User.findOne({ where: { email } });
 
     if (!user) {
+      logger.error("Unauthorized: User not found with email:"+email,error);
       res.status(401).json({ error: 'Unauthorized: User not found' });
       return;
     }
@@ -24,11 +29,13 @@ async function basicAuth(req, res, next) {
     // Use bcrypt.compare to compare the provided password with the hashed password from the database
     bcrypt.compare(providedPassword, user.password, (err, result) => {
       if (err || !result) {
+        logger.error("Unauthorized: Invalid Password",error);
         res.status(401).json({ error: 'Unauthorized: Invalid credentials' });
         return;
       }
 
       // Authentication successful
+      logger.info("Authentication Success")
       next();
     });
   } catch (error) {

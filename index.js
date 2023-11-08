@@ -41,12 +41,11 @@ app.get('/healthz', async (req, res) => {
     }
   });
 
-  app.patch('/', basicAuth, async (req, res) => {
-    try {
-      res.status(405).json({ error: 'Method Not Allowed' });
-    } catch (error) {
-      console.error('Error:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
+  app.use((req, res, next) => {
+    if (req.method === 'PATCH') {
+      res.status(404).json({ error: 'Not Found' });
+    } else {
+      next(); 
     }
   });
 
@@ -232,6 +231,9 @@ app.put('/assignments/:id', basicAuth, async (req, res) => {
 // Route to delete an assignment by ID
 app.delete('/assignments/:id', basicAuth, async (req, res) => {
   try {
+    if (Object.keys(req.body).length !== 0) {
+      return res.status(400).json({ error: 'DELETE request should not include a request body' });
+    }
     // Extract the assignment ID from the route parameter
     statsdClient.increment('Assignments/ID_Delete_API_count');
     logger.info("Delete Assignment with ID started");

@@ -4,7 +4,8 @@ const User = require('./models/Users');
 const {Assignment, Assignment_links} = require('./models/Assignments');
 const basicAuth = require('./Token');
 const logger = require('./logger/logger');
-const statsdClient = require('./statsd/statsd');
+var stats = require('node-statsd'),
+    statsdClient = new stats();
 const { error } = require('winston');
 
 const dotenv = require('dotenv');

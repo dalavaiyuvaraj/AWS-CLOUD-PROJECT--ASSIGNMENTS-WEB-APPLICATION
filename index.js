@@ -21,7 +21,7 @@ app.use(express.json());
 app.get('/healthz', async (req, res) => {
   const start = process.hrtime();
   logger.info("Healthz Check Start");
-  statsdClient.increment('healthz.get');
+  statsdClient.increment('healthz_get_count');
   const durationInMs = process.hrtime(start)[1] / 1000000;
   statsdClient.timing('healthz_response_time', durationInMs);
     try {
@@ -53,7 +53,7 @@ app.get('/healthz', async (req, res) => {
 // Route to retrieve all assignments with Basic Authentication required
 app.get('/assignments', basicAuth, async (req, res) => {
   try {
-    statsdClient.increment('healthz.get');
+    statsdClient.increment('Assignments_get_Api_count');
     logger.info("Request to get all assignment Started");
     // Use Sequelize to query the "Assignment" table for all assignments
     const assignments = await Assignment.findAll();
@@ -72,7 +72,7 @@ app.get('/assignments', basicAuth, async (req, res) => {
 app.post('/assignments', basicAuth, async (req, res) => {
   try {
     // Extract the email from the authorization header (Basic Auth)
-    statsdClient.increment('Assignments.post');
+    statsdClient.increment('Assignments_post_Api_count');
     logger.info("Post Assignment Started");
     const authHeader = req.headers.authorization || '';
     const base64Credentials = authHeader.split(' ')[1] || '';
@@ -91,6 +91,16 @@ app.post('/assignments', basicAuth, async (req, res) => {
     // Extract assignment data from the request body
     const { name, points, num_of_attempts, deadline } = req.body;
 
+    // Use Sequelize to check for assignments with the same name
+    const existingAssignment = await Assignment.findOne({ where: { name } });
+
+    if (existingAssignment) {
+      // Assignment with the same name already exists
+      logger.error("Assignment with the same name already exists");
+      return res.status(400).json({ error: 'Assignment with the same name already exists' });
+    }
+
+
     // Use Sequelize to create a new assignment in the "Assignment" table
     const newAssignment = await Assignment.create({
       name,
@@ -101,6 +111,7 @@ app.post('/assignments', basicAuth, async (req, res) => {
 
     // Concatenate user ID and assignment ID with an underscore ('_')
     const concatenatedId = `${user.id}_${newAssignment.id}`;
+    const Assign_ID = newAssignment.id;
 
   
 
@@ -111,7 +122,7 @@ app.post('/assignments', basicAuth, async (req, res) => {
 
       // Include the newly created assignment in the response
       const responsePayload = {
-        newAssignment, 
+        Assign_ID,
       };
 
     // Return the response payload in the JSON response
@@ -129,7 +140,7 @@ app.post('/assignments', basicAuth, async (req, res) => {
 app.get('/assignments/:id',basicAuth, async (req, res) => {
   try {
     // Extract the assignment ID from the route parameter
-    statsdClient.increment('Assignments/ID.get');
+    statsdClient.increment('Assignments/ID_get_API_Count');
     logger.info("GET Assignment with ID started");
     const { id } = req.params;
 
@@ -139,7 +150,7 @@ app.get('/assignments/:id',basicAuth, async (req, res) => {
     if (!assignment) {
       // Handle the case where the assignment with the provided ID does not exist
       logger.error("Unable to find Assignment with ID:"+id , error);
-      return res.status(403).json({ error: 'Assignment not found' });
+      return res.status(404).json({ error: 'Assignment not found' });
     }
 
     // Return the assignment details as a JSON response
@@ -156,7 +167,7 @@ app.get('/assignments/:id',basicAuth, async (req, res) => {
 app.put('/assignments/:id', basicAuth, async (req, res) => {
   try {
     // Extract the assignment ID from the route parameter
-    statsdClient.increment('Assignments/ID.put');
+    statsdClient.increment('Assignments/ID_put_API_count');
     logger.info("Update Assignment with ID started");
     const { id } = req.params;
 
@@ -222,7 +233,7 @@ app.put('/assignments/:id', basicAuth, async (req, res) => {
 app.delete('/assignments/:id', basicAuth, async (req, res) => {
   try {
     // Extract the assignment ID from the route parameter
-    statsdClient.increment('Assignments/ID.Delete');
+    statsdClient.increment('Assignments/ID_Delete_API_count');
     logger.info("Delete Assignment with ID started");
     const { id } = req.params;
 

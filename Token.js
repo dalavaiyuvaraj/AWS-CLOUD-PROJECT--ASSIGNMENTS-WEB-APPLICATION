@@ -1,7 +1,6 @@
 const bcrypt = require('bcrypt');
 const User = require('./models/Users'); // Update the path as per your project structure
 const logger = require('./logger/logger');
-const statsdClient = require('./statsd/statsd');
 const { error } = require('winston');
 
 async function basicAuth(req, res, next) {

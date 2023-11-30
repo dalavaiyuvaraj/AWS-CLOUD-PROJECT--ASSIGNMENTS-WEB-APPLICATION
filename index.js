@@ -2,11 +2,16 @@ const express = require('express');
 const sequelize = require('./database');
 const User = require('./models/Users');
 const {Assignment, Assignment_links} = require('./models/Assignments');
+const {Submission, SubmissionCountTable} = require('./models/Submission');
 const basicAuth = require('./Token');
 const logger = require('./logger/logger');
 var stats = require('node-statsd'),
     statsdClient = new stats();
 const { error } = require('winston');
+const AWS = require('aws-sdk');
+
+const sns = new AWS.SNS();
+const topicArn = process.env.SNSTOPICARN;
 
 const dotenv = require('dotenv');
 
@@ -275,6 +280,15 @@ app.delete('/assignments/:id', basicAuth, async (req, res) => {
       return res.status(403).json({ error: 'You are not authorized to delete this assignment' });
     }
 
+    let userSubmissions = await SubmissionCountTable.count({
+      where: { assignment_id: assignment.id },
+    });
+    console.log(userSubmissions);
+
+    if (userSubmissions>0){
+      return res.status(403).json({error: 'Assignment cannot be deleted due to submissions against it'});
+    }
+
     // Delete the assignment from the database
     await assignment.destroy();
 
@@ -288,6 +302,93 @@ app.delete('/assignments/:id', basicAuth, async (req, res) => {
     logger.error("Unable to delete assignment",error);
     console.error('Error:', error);
     res.status(404).json({ error: 'Unable to delete assignment' });
+  }
+});
+
+app.post('/assignments/:id/submissions', basicAuth, async (req, res) => {
+  try {
+    const { submission_url } = req.body;
+    const { id }  = req.params;
+
+    const authHeader = req.headers.authorization || '';
+    const base64Credentials = authHeader.split(' ')[1] || '';
+    const credentials = Buffer.from(base64Credentials, 'base64').toString('utf-8');
+    const [email, password] = credentials.split(':');
+
+    // Use Sequelize to find the user by email
+    const user = await User.findOne({ where: { email } });
+
+    if (!user) {
+      // Handle the case where the user with the provided email does not exist
+      logger.error("User not found with email" + email, error);
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Use Sequelize to find the assignment by its ID
+    const assignment = await Assignment.findOne({ where: { id } });
+
+    if (!assignment) {
+      // Handle the case where the assignment with the provided ID does not exist
+      logger.error("Assignment not found with id:"+id,error);
+      return res.status(404).json({ error: 'Assignment not found' });
+    }
+
+    // Check if the submission deadline has passed
+    const currentDate = new Date();
+    const deadline = new Date(assignment.deadline);
+
+    if (currentDate > deadline) {
+      return res.status(403).json({ error: 'Submission deadline has passed' });
+    }
+
+    // Check if the user has already exceeded the retries
+    const retriesConfig = assignment.num_of_attempts || 1; // Assuming a default of 1 attempt
+    let userSubmissions = await SubmissionCountTable.count({
+      where: { email, assignment_id: assignment.id },
+    });
+    console.log(userSubmissions);
+
+    if (userSubmissions >= retriesConfig) {
+      return res.status(403).json({ error: 'Exceeded maximum number of attempts' });
+    }
+
+    // Create submission entry in the database
+    const newSubmission = await Submission.create({
+      assignment_id: assignment.id,
+      submission_url: submission_url, 
+      // Other submission data from req.body
+    });
+    userSubmissions++;
+    const newSubmissionCount = await SubmissionCountTable.create({
+      email: email,
+      assignment_id: assignment.id,
+    })
+
+    const message = {
+      gitRepoUrl: submission_url,
+      emailAddress: email,
+    };
+
+    const messageParams = {
+      Message: JSON.stringify(message), // Customize the message content
+      TopicArn: topicArn , // Replace with your SNS topic ARN
+    };
+    
+    // Publish the SMS message to the specified SNS topic
+    sns.publish(messageParams, (snsErr, data) => {
+      if (snsErr) {
+        console.error('Error publishing SMS:', snsErr);
+        // Handle error if required
+      } else {
+        console.log('SMS published successfully:', data.MessageId);
+        // Optionally, handle success response
+      }
+    });
+
+    res.status(201).json({ message: 'Submission successful' });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(400).json({ error: 'Unable to process submission' });
   }
 });
 

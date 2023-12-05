@@ -10,6 +10,8 @@ var stats = require('node-statsd'),
 const { error } = require('winston');
 const AWS = require('aws-sdk');
 
+AWS.config.update({ region: 'us-east-1' });
+
 const sns = new AWS.SNS();
 const topicArn = process.env.SNSTOPICARN;
 
@@ -385,7 +387,7 @@ app.post('/assignments/:id/submissions', basicAuth, async (req, res) => {
       }
     });
 
-    res.status(201).json({ message: 'Submission successful' });
+    res.status(201).json(newSubmission);
   } catch (error) {
     console.error('Error:', error);
     res.status(400).json({ error: 'Unable to process submission' });

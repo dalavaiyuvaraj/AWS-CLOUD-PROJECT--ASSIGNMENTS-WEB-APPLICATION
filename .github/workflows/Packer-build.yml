@@ -5,11 +5,6 @@ on:
     types:
       - closed
 
-env:
-  AWS_ACCESS_KEY_ID_1: ${{ secrets.AWS_ACCESS_KEY_ID_1 }}
-  AWS_SECRET_ACCESS_KEY_1: ${{ secrets.AWS_SECRET_ACCESS_KEY_1 }}
-  AWS_REGION: us-east-1
-
 jobs:
   create-zip:
     runs-on: ubuntu-latest
@@ -24,9 +19,11 @@ jobs:
           zip -r webapp.zip .
         working-directory: ${{ github.workspace }}
 
-
-
       - name: Build AMI
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_1 }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_1 }}
+          AWS_REGION: us-east-1
         run: |
           packer init ./packer/aws-Debian.pkr.hcl
           packer fmt ./packer/aws-Debian.pkr.hcl
@@ -34,6 +31,10 @@ jobs:
           packer build ./packer/aws-Debian.pkr.hcl
 
       - name: Update Launch Template
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_2 }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_2 }}
+          AWS_REGION: us-east-1
         if: always() # run even if previous step fails
         run: |
           asg_name="webapp_autoscaling_group"
@@ -62,7 +63,23 @@ jobs:
 
             # Refresh instances in the autoscaling group
             aws autoscaling start-instance-refresh \
-            --auto-scaling-group-name $asg_name
+            --auto-scaling-group-name $asg_name \
             --preferences '{"InstanceWarmup": 300, "MinHealthyPercentage": 0, "InstanceRefreshType": "Replace"}' \
-            --query 'InstanceRefreshId')
+            --query 'InstanceRefreshId'
+      
+            echo "Instance Refresh ID: $refresh_output"
+            echo "Waiting for instance refresh to complete..."
+            refresh_status=$(aws autoscaling describe-instance-refreshes \
+            --auto-scaling-group-name $asg_name \
+            --instance-refresh-ids $refresh_output \
+            --query 'InstanceRefreshes[0].Status')
+      
+            echo "Instance Refresh Status: $refresh_status"
+        
+            if [ "$refresh_status" = '"Successful"' ]; then
+              echo "Instance refresh successful."
+            else
+              echo "Instance refresh failed or is not yet successful."
+              exit 1
+            fi
           fi

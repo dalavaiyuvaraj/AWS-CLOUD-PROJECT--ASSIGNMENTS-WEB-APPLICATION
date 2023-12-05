@@ -27,10 +27,6 @@ variable "subnet_id" {
   default = "subnet-0e2ecf06922ae0563"
 }
 
-variable "ami_name" {
-  type    = string
-  default = "Ami_1"
-}
 
 variable "ami_description" {
   type    = string
@@ -50,7 +46,7 @@ variable "instance_type" {
 
 
 source "amazon-ebs" "my-ami" {
-  ami_name        = "${var.ami_name}"
+  ami_name        = "csye6225_${formatdate("YYYY_MM_DD_hh_mm_ss", timestamp())}"
   ami_description = "${var.ami_description}"
   region          = "${var.aws_region}"
   ami_users       = [245217519501, 940256833926]

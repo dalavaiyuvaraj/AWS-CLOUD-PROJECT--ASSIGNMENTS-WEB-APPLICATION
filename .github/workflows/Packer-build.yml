@@ -5,6 +5,11 @@ on:
     types:
       - closed
 
+env:
+  AWS_ACCESS_KEY_ID_1: ${{ secrets.AWS_ACCESS_KEY_ID_1 }}
+  AWS_SECRET_ACCESS_KEY_1: ${{ secrets.AWS_SECRET_ACCESS_KEY_1 }}
+  AWS_REGION: us-east-1
+
 jobs:
   create-zip:
     runs-on: ubuntu-latest
@@ -27,6 +32,37 @@ jobs:
           packer fmt ./packer/aws-Debian.pkr.hcl
           packer validate ./packer/aws-Debian.pkr.hcl
           packer build ./packer/aws-Debian.pkr.hcl
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Update Launch Template
+        if: always() # run even if previous step fails
+        run: |
+          asg_name="webapp_autoscaling_group"
+
+          # Check if the autoscaling group exists
+          asg_exists=$(aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names $asg_name --query "length(AutoScalingGroups)")
+
+          if [ "$asg_exists" -eq 0 ]; then
+            echo "Autoscaling group $asg_name not found. Exiting."
+            exit 1
+          else
+
+            # Get the latest AMI ID
+            latest_ami=$(aws ec2 describe-images \
+            --owners self \
+            --filters "Name=state,Values=available" "Name=architecture,Values=x86_64" "Name=root-device-type,Values=ebs" \
+            --query "reverse(sort_by(Images, &CreationDate))[0].ImageId" \
+            )
+            echo "The latest AMI is: $latest_ami"
+
+            # Update the launch template with the latest AMI
+            aws ec2 create-launch-template-version \
+            --launch-template-name myLaunchTemplate \
+            --source-version 1 \
+            --launch-template-data '{"ImageId":'$latest_ami'}'
+
+            # Refresh instances in the autoscaling group
+            aws autoscaling start-instance-refresh \
+            --auto-scaling-group-name $asg_name
+            --preferences '{"InstanceWarmup": 300, "MinHealthyPercentage": 0, "InstanceRefreshType": "Replace"}' \
+            --query 'InstanceRefreshId')
+          fi

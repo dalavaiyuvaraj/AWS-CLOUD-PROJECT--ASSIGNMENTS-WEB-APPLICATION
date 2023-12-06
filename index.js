@@ -25,7 +25,7 @@ const app = express();
 app.use(express.json());
 
 // Health check route to test database connectivity
-app.get('/healthz', async (req, res) => {
+app.get('/demo/healthz', async (req, res) => {
   const start = process.hrtime();
   logger.info("Healthz Check Start");
   statsdClient.increment('healthz_get_count');
@@ -57,7 +57,7 @@ app.get('/healthz', async (req, res) => {
   });
 
 // Route to retrieve all assignments with Basic Authentication required
-app.get('/assignments', basicAuth, async (req, res) => {
+app.get('/demo/assignments', basicAuth, async (req, res) => {
   try {
     statsdClient.increment('Assignments_get_Api_count');
     logger.info("Request to get all assignment Started");
@@ -75,7 +75,7 @@ app.get('/assignments', basicAuth, async (req, res) => {
 
 
 // Route to create a new assignment and concatenate user ID and assignment ID
-app.post('/assignments', basicAuth, async (req, res) => {
+app.post('/demo/assignments', basicAuth, async (req, res) => {
   try {
     // Extract the email from the authorization header (Basic Auth)
     statsdClient.increment('Assignments_post_Api_count');
@@ -143,7 +143,7 @@ app.post('/assignments', basicAuth, async (req, res) => {
 
 
 // Route to get assignment details by ID
-app.get('/assignments/:id',basicAuth, async (req, res) => {
+app.get('/demo/assignments/:id',basicAuth, async (req, res) => {
   try {
     // Extract the assignment ID from the route parameter
     statsdClient.increment('Assignments/ID_get_API_Count');
@@ -170,7 +170,7 @@ app.get('/assignments/:id',basicAuth, async (req, res) => {
 });
 
 // Route to update an assignment by ID
-app.put('/assignments/:id', basicAuth, async (req, res) => {
+app.put('/demo/assignments/:id', basicAuth, async (req, res) => {
   try {
     // Extract the assignment ID from the route parameter
     statsdClient.increment('Assignments/ID_put_API_count');
@@ -236,7 +236,7 @@ app.put('/assignments/:id', basicAuth, async (req, res) => {
 });
 
 // Route to delete an assignment by ID
-app.delete('/assignments/:id', basicAuth, async (req, res) => {
+app.delete('/demo/assignments/:id', basicAuth, async (req, res) => {
   try {
     if (Object.keys(req.body).length !== 0) {
       return res.status(400).json({ error: 'DELETE request should not include a request body' });
@@ -307,7 +307,7 @@ app.delete('/assignments/:id', basicAuth, async (req, res) => {
   }
 });
 
-app.post('/assignments/:id/submissions', basicAuth, async (req, res) => {
+app.post('/demo/assignments/:id/submissions', basicAuth, async (req, res) => {
   try {
     const { submission_url } = req.body;
     const { id }  = req.params;

@@ -49,7 +49,7 @@ jobs:
 
             # Get the latest AMI ID
             latest_ami=$(aws ec2 describe-images \
-            --owners self \
+            --executable-users self \
             --filters "Name=state,Values=available" "Name=architecture,Values=x86_64" "Name=root-device-type,Values=ebs" \
             --query "reverse(sort_by(Images, &CreationDate))[0].ImageId" \
             )
@@ -64,22 +64,31 @@ jobs:
             # Refresh instances in the autoscaling group
             aws autoscaling start-instance-refresh \
             --auto-scaling-group-name $asg_name \
-            --preferences '{"InstanceWarmup": 300, "MinHealthyPercentage": 0, "InstanceRefreshType": "Replace"}' \
+            --preferences '{"InstanceWarmup": 300, "MinHealthyPercentage": 0, "StandbyInstances": "Terminate"}' \
             --query 'InstanceRefreshId'
       
             echo "Instance Refresh ID: $refresh_output"
             echo "Waiting for instance refresh to complete..."
-            refresh_status=$(aws autoscaling describe-instance-refreshes \
-            --auto-scaling-group-name $asg_name \
-            --instance-refresh-ids $refresh_output \
-            --query 'InstanceRefreshes[0].Status')
-      
-            echo "Instance Refresh Status: $refresh_status"
+
+            while true; do
+              refresh_status=$(aws autoscaling describe-instance-refreshes \
+              --auto-scaling-group-name $asg_name \
+              --query 'InstanceRefreshes[0].Status')
         
-            if [ "$refresh_status" = '"Successful"' ]; then
-              echo "Instance refresh successful."
-            else
-              echo "Instance refresh failed or is not yet successful."
-              exit 1
-            fi
+              echo "Instance Refresh Status: $refresh_status"
+          
+              if [ "$refresh_status" = '"Successful"' ]; then
+                echo "Instance refresh successful."
+                break
+              elif [ "$refresh_status" = '"Failed"' ]; then
+                echo "Instance refresh successful."
+                break
+              elif [ "$refresh_status" = '"Cancelled"' ]; then
+                echo "Instance refresh successful."
+                break                            
+              else
+                echo "Instance refresh not yet successful waiting....."
+                sleep 1
+              fi
+            done
           fi
